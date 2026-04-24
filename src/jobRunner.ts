@@ -15,6 +15,10 @@ export interface ExcludeJobRunner {
   dispose: () => void;
 }
 
+interface GenerationProgressReporter {
+  report: (message: string) => void;
+}
+
 /**
  * 创建单实例任务执行器，避免重复并发生成。
  */
@@ -43,7 +47,25 @@ export function createExcludeJobRunner(): ExcludeJobRunner {
     const startedAt = Date.now();
     appendLog(outputChannel, "job", "accepted generation request");
 
-    runningTask = executeGeneration(outputChannel)
+    runningTask = Promise.resolve(
+      vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "vs-exclude",
+          cancellable: false,
+        },
+        async (progress) => {
+          const progressReporter: GenerationProgressReporter = {
+            report: (message: string) => {
+              progress.report({ message });
+            },
+          };
+
+          progressReporter.report("正在准备生成 files.exclude...");
+          await executeGeneration(outputChannel, progressReporter);
+        },
+      ),
+    )
       .catch(async (error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
         appendLog(outputChannel, "error", message);
@@ -69,7 +91,10 @@ export function createExcludeJobRunner(): ExcludeJobRunner {
 /**
  * 执行完整的扫描、匹配、折叠和写回流程。
  */
-async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<void> {
+async function executeGeneration(
+  outputChannel: vscode.OutputChannel,
+  progressReporter: GenerationProgressReporter,
+): Promise<void> {
   outputChannel.appendLine("");
   appendLog(outputChannel, "job", "start generation");
 
@@ -92,6 +117,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
   );
 
   appendLog(outputChannel, "scan", "scanning workspace files");
+  progressReporter.report("正在扫描工作区文件...");
   const allFiles = await scanWorkspaceFiles(workspaceFolder);
   appendLog(
     outputChannel,
@@ -102,6 +128,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const compileCommandsStartedAt = Date.now();
   appendLog(outputChannel, "compile_commands", "loading compile_commands.json");
+  progressReporter.report("正在读取 compile_commands.json...");
   const compileCommands = await loadCompileCommands(workspaceFolder, config, (message) => {
     appendLog(outputChannel, "compile_commands", message);
   });
@@ -123,6 +150,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const matchStartedAt = Date.now();
   appendLog(outputChannel, "match", "building visibility sets");
+  progressReporter.report("正在计算保留与隐藏文件...");
   const visibility = buildVisibilitySets({
     allFiles,
     includePatterns: config.include,
@@ -139,6 +167,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const buildStartedAt = Date.now();
   appendLog(outputChannel, "exclude", "building files.exclude payload");
+  progressReporter.report("正在生成 files.exclude 规则...");
   appendLog(outputChannel, "exclude", `direct exclude patterns: ${formatList(config.exclude, 5)}`);
   const filesExclude = buildFilesExclude(allFiles, visibility.hiddenFiles, config.exclude);
   const filesExcludeKeys = Object.keys(filesExclude);
@@ -148,6 +177,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const writeStartedAt = Date.now();
   appendLog(outputChannel, "write", "writing files.exclude to workspace settings");
+  progressReporter.report("正在写入 .vscode/settings.json...");
   const writeResult = await writeFilesExcludeToSettings(workspaceFolder, filesExclude);
   appendLog(outputChannel, "write", `settings path: ${writeResult.settingsPath.fsPath}`);
   appendLog(outputChannel, "write", `read settings in ${writeResult.readDurationMs} ms`);
@@ -166,6 +196,7 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
   appendLog(outputChannel, "write", `write mode: ${writeResult.changed ? "updated" : "skipped (no change)"}`);
 
   appendLog(outputChannel, "write", `files.exclude updated in ${Date.now() - writeStartedAt} ms`);
+  progressReporter.report("已完成，正在收尾...");
   void vscode.window.showInformationMessage("vs-exclude updated files.exclude.");
 }
 
