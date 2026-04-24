@@ -36,3 +36,26 @@ test("buildFilesExclude keeps fine-grained entries for mixed directories", () =>
     "src/nested/c.c": true,
   });
 });
+
+test("buildFilesExclude keeps direct exclude globs without expanding matched files", () => {
+  const result = buildFilesExclude(
+    [
+      "src/main.c",
+      "src/generated/a.c",
+      "src/generated/b.c",
+      "tests/unit/foo.c",
+    ],
+    new Set([
+      "src/generated/a.c",
+      "src/generated/b.c",
+      "tests/unit/foo.c",
+    ]),
+    ["src/generated/**", "tests/**", "**/*.tmp"],
+  );
+
+  assert.deepEqual(result, {
+    "**/*.tmp": true,
+    "tests/**": true,
+    "src/generated/**": true,
+  });
+});

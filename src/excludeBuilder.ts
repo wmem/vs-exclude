@@ -1,6 +1,9 @@
 /**
  * files.exclude 构建模块，负责把隐藏文件集合折叠为目录级规则。
  */
+import { minimatch } from "minimatch";
+import { normalizeRelativePath } from "./pathUtils";
+
 interface DirectoryNode {
   children: Map<string, DirectoryNode>;
   files: Set<string>;
@@ -19,17 +22,27 @@ function createNode(): DirectoryNode {
 }
 
 /**
- * 根据全部文件和隐藏集合生成最小化的 files.exclude 配置。
+ * 根据全部文件、隐藏集合和直接透传的 glob 规则生成最小化的 files.exclude 配置。
  */
 export function buildFilesExclude(
   allFiles: string[],
   hiddenFiles: Set<string>,
+  directExcludePatterns: string[] = [],
 ): Record<string, boolean> {
+  const normalizedPatterns = normalizePatterns(directExcludePatterns);
+  const filteredHiddenFiles = new Set(
+    [...hiddenFiles].filter((filePath) => !matchesAnyPattern(filePath, normalizedPatterns)),
+  );
   const root = createTree(allFiles);
-  markFullyHidden(root, "", hiddenFiles);
+  markFullyHidden(root, "", filteredHiddenFiles);
 
   const result: Record<string, boolean> = {};
-  collectPatterns(root, "", hiddenFiles, result);
+
+  for (const pattern of normalizedPatterns) {
+    result[pattern] = true;
+  }
+
+  collectPatterns(root, "", filteredHiddenFiles, result);
   return result;
 }
 
@@ -124,4 +137,28 @@ function collectPatterns(
     const childPath = currentPath ? `${currentPath}/${childName}` : childName;
     collectPatterns(childNode, childPath, hiddenFiles, result);
   }
+}
+
+/**
+ * 判断单个文件是否命中任一透传到 files.exclude 的 glob 模式。
+ */
+function matchesAnyPattern(filePath: string, patterns: string[]): boolean {
+  return patterns.some((pattern) => {
+    if (pattern === filePath) {
+      return true;
+    }
+
+    return minimatch(filePath, pattern, { dot: true });
+  });
+}
+
+/**
+ * 清洗透传到 files.exclude 的 glob 规则，避免重复和空值。
+ */
+function normalizePatterns(patterns: string[]): string[] {
+  return [...new Set(
+    patterns
+      .map((pattern) => normalizeRelativePath(pattern.trim()))
+      .filter((pattern) => pattern.length > 0),
+  )];
 }

@@ -138,7 +138,8 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const buildStartedAt = Date.now();
   appendLog(outputChannel, "exclude", "building files.exclude payload");
-  const filesExclude = buildFilesExclude(allFiles, visibility.hiddenFiles);
+  appendLog(outputChannel, "exclude", `direct exclude patterns: ${formatList(config.exclude, 5)}`);
+  const filesExclude = buildFilesExclude(allFiles, visibility.hiddenFiles, config.exclude);
   const filesExcludeKeys = Object.keys(filesExclude);
   appendLog(outputChannel, "exclude", `completed in ${Date.now() - buildStartedAt} ms`);
   appendLog(outputChannel, "exclude", `files.exclude entries: ${filesExcludeKeys.length}`);

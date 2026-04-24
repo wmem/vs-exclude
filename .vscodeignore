@@ -1,7 +1,6 @@
 src/**
 test/**
 .vscode/**
-node_modules/**
 out/**
 tsconfig.json
 .gitignore

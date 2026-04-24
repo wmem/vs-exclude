@@ -32,7 +32,7 @@
 字段说明：
 - `header`: 为 `true` 时，保留 `compile_commands.json` 中 include 搜索目录下的 `.h` 文件。
 - `include`: 额外保留的文件 glob。
-- `exclude`: 从保留集合中再次排除的 glob。
+- `exclude`: 直接写入 `files.exclude` 的 glob，同时也会让这些文件不再被视为保留文件。
 - `compileCommandsPath`: 可选，自定义 `compile_commands.json` 路径；未设置时默认尝试工作区根目录。
 
 兼容旧配置：
@@ -70,6 +70,7 @@
 - 每次执行都会直接覆盖工作区级 `files.exclude`。
 - 若指定路径和根目录都没有 `compile_commands.json`，则只按 `include` / `exclude` 计算。
 - 当某个目录整棵子树都应隐藏时，会直接生成目录级排除规则，而不是逐文件写入。
+- 配置中的 `exclude` 规则会原样写入 `files.exclude`，不会再被扫描结果展开成大量单文件项。
 - 生成过程在后台异步执行，长时间扫描时可通过日志查看进度。
 - `.vscode/settings.json` 会被强制保留，避免生成后无法继续修改扩展配置。
 
