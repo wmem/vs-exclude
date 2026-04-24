@@ -91,6 +91,7 @@ settings["files.exclude"] = filesExclude;
 
 - 这里会完整覆盖旧的 `files.exclude` 项。
 - 其他设置项会被保留，不会被插件改写。
+- 由于会整体重写 `settings.json` 文本，原有注释和手工格式会被规范化。
 
 ## 日志与并发控制
 

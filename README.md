@@ -69,6 +69,7 @@
 
 - 每次执行都会直接覆盖工作区级 `files.exclude`。
 - 插件会直接更新 `.vscode/settings.json` 中的 `files.exclude`，但会保留其他设置项不变。
+- 写回时会把 `settings.json` 规范化成标准 JSON 文本，因此原有注释和局部格式可能会被重写。
 - 若指定路径和根目录都没有 `compile_commands.json`，则只按 `include` / `exclude` 计算。
 - 当某个目录整棵子树都应隐藏时，会直接生成目录级排除规则，而不是逐文件写入。
 - 配置中的 `exclude` 规则会原样写入 `files.exclude`，不会再被扫描结果展开成大量单文件项。

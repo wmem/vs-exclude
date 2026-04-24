@@ -1,7 +1,7 @@
 /**
  * 后台任务模块，负责串行执行生成流程并输出运行日志。
  */
-import { applyEdits, modify, parse } from "jsonc-parser";
+import { parse } from "jsonc-parser";
 import * as vscode from "vscode";
 import { readExtensionConfig } from "./config";
 import { loadCompileCommands } from "./compileCommands";
@@ -150,7 +150,19 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
   appendLog(outputChannel, "write", "writing files.exclude to workspace settings");
   const writeResult = await writeFilesExcludeToSettings(workspaceFolder, filesExclude);
   appendLog(outputChannel, "write", `settings path: ${writeResult.settingsPath.fsPath}`);
-  appendLog(outputChannel, "write", `settings bytes: ${writeResult.byteLength}`);
+  appendLog(outputChannel, "write", `read settings in ${writeResult.readDurationMs} ms`);
+  appendLog(
+    outputChannel,
+    "write",
+    `current settings bytes: ${writeResult.previousByteLength}, current files.exclude entries: ${writeResult.previousExcludeEntryCount}`,
+  );
+  appendLog(outputChannel, "write", `prepared new settings in ${writeResult.prepareDurationMs} ms`);
+  appendLog(
+    outputChannel,
+    "write",
+    `new settings bytes: ${writeResult.nextByteLength}, new files.exclude entries: ${writeResult.nextExcludeEntryCount}`,
+  );
+  appendLog(outputChannel, "write", `wrote settings file in ${writeResult.writeDurationMs} ms`);
   appendLog(outputChannel, "write", `write mode: ${writeResult.changed ? "updated" : "skipped (no change)"}`);
 
   appendLog(outputChannel, "write", `files.exclude updated in ${Date.now() - writeStartedAt} ms`);
@@ -159,7 +171,13 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
 interface WriteFilesExcludeResult {
   changed: boolean;
-  byteLength: number;
+  previousByteLength: number;
+  nextByteLength: number;
+  previousExcludeEntryCount: number;
+  nextExcludeEntryCount: number;
+  readDurationMs: number;
+  prepareDurationMs: number;
+  writeDurationMs: number;
   settingsPath: vscode.Uri;
 }
 
@@ -175,49 +193,71 @@ async function writeFilesExcludeToSettings(
 
   await vscode.workspace.fs.createDirectory(vscodeDirectory);
 
+  const readStartedAt = Date.now();
   const existingText = await readJsoncFile(settingsPath);
+  const readDurationMs = Date.now() - readStartedAt;
+  const previousByteLength = new TextEncoder().encode(existingText).byteLength;
+
+  const prepareStartedAt = Date.now();
   const currentDocument = parse(existingText) as Record<string, unknown> | undefined;
   const currentFilesExclude = isObject(currentDocument?.["files.exclude"])
     ? currentDocument["files.exclude"]
     : undefined;
+  const previousExcludeEntryCount = isObject(currentFilesExclude)
+    ? Object.keys(currentFilesExclude).length
+    : 0;
 
   if (stableStringify(currentFilesExclude) === stableStringify(filesExclude)) {
+    const prepareDurationMs = Date.now() - prepareStartedAt;
     return {
       changed: false,
-      byteLength: new TextEncoder().encode(existingText).byteLength,
+      previousByteLength,
+      nextByteLength: previousByteLength,
+      previousExcludeEntryCount,
+      nextExcludeEntryCount: previousExcludeEntryCount,
+      readDurationMs,
+      prepareDurationMs,
+      writeDurationMs: 0,
       settingsPath,
     };
   }
 
   const updatedText = applyFilesExcludeToSettings(existingText, filesExclude);
+  const prepareDurationMs = Date.now() - prepareStartedAt;
   const encodedText = new TextEncoder().encode(updatedText);
+  const writeStartedAt = Date.now();
   await vscode.workspace.fs.writeFile(settingsPath, encodedText);
+  const writeDurationMs = Date.now() - writeStartedAt;
 
   return {
     changed: true,
-    byteLength: encodedText.byteLength,
+    previousByteLength,
+    nextByteLength: encodedText.byteLength,
+    previousExcludeEntryCount,
+    nextExcludeEntryCount: Object.keys(filesExclude).length,
+    readDurationMs,
+    prepareDurationMs,
+    writeDurationMs,
     settingsPath,
   };
 }
 
 /**
- * 使用 JSONC 编辑保留 settings.json 里的其他内容，只替换 `files.exclude`。
+ * 基于已解析的配置对象重建 settings.json，并仅替换 `files.exclude`。
  */
 function applyFilesExcludeToSettings(
   settingsText: string,
   filesExclude: Record<string, boolean>,
 ): string {
-  const edits = modify(settingsText || "{}", ["files.exclude"], filesExclude, {
-    formattingOptions: {
-      insertSpaces: true,
-      tabSize: 4,
-      eol: settingsText.includes("\r\n") ? "\r\n" : "\n",
-    },
-    isArrayInsertion: false,
-    getInsertionIndex: undefined,
-  });
+  const parsedSettings = parse(settingsText || "{}") as Record<string, unknown> | undefined;
+  const settingsObject = isObject(parsedSettings) ? parsedSettings : {};
+  const normalizedEol = settingsText.includes("\r\n") ? "\r\n" : "\n";
+  const nextSettings = {
+    ...settingsObject,
+    "files.exclude": filesExclude,
+  };
 
-  return applyEdits(settingsText || "{}", edits);
+  return `${JSON.stringify(nextSettings, null, 4)}${normalizedEol}`;
 }
 
 /**
