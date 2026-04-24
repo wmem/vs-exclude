@@ -1,0 +1,114 @@
+# 配置说明
+
+扩展优先从 `.vscode/settings.json` 读取 `vsExclude.config` 对象配置；若对象配置缺失，则回退到 `vsExclude.*` 拆分配置；旧的 `vscodeExclude.*` 命名空间也继续兼容。
+
+## 推荐配置
+
+```json
+{
+  "vsExclude.config": {
+    "header": true,
+    "include": [
+      "drivers/net/**",
+      "include/linux/**/*.h"
+    ],
+    "exclude": [
+      "**/test/**"
+    ],
+    "compileCommandsPath": "build/compile_commands.json"
+  }
+}
+```
+
+## 字段含义
+
+### `header`
+
+- 类型：`boolean`
+- 默认值：`true`
+- 含义：是否保留 `compile_commands.json` 中 include 搜索目录下的 `.h` 文件。
+
+说明：这里不会解析真实头文件依赖图，而是按照编译参数里的 `-I`、`-isystem`、`-iquote` 目录统一保留头文件。
+
+### `include`
+
+- 类型：`string[]`
+- 默认值：`[]`
+- 含义：额外保留的文件 glob 规则。
+
+示例：
+
+```json
+{
+  "vsExclude.config": {
+    "include": [
+      "drivers/net/**",
+      "arch/arm64/include/**/*.h"
+    ]
+  }
+}
+```
+
+### `exclude`
+
+- 类型：`string[]`
+- 默认值：`[]`
+- 含义：从保留集合中再次剔除的文件 glob 规则。
+
+示例：
+
+```json
+{
+  "vsExclude.config": {
+    "exclude": [
+      "**/test/**",
+      "**/*.tmp"
+    ]
+  }
+}
+```
+
+### `compileCommandsPath`
+
+- 类型：`string`
+- 默认值：空字符串
+- 含义：自定义 `compile_commands.json` 路径。
+
+解析规则：
+
+- 配置为绝对路径时，直接使用该路径。
+- 配置为相对路径时，以工作区根目录为基准解析。
+- 未配置时，默认尝试工作区根目录下的 `compile_commands.json`。
+- 两者都不存在时，仅根据 `include` / `exclude` 计算保留集合。
+
+## 旧配置兼容
+
+当前命名空间的拆分配置写法：
+
+```json
+{
+  "vsExclude.header": true,
+  "vsExclude.include": [],
+  "vsExclude.exclude": [],
+  "vsExclude.compileCommandsPath": ""
+}
+```
+
+旧命名空间也仍兼容：
+
+```json
+{
+  "vscodeExclude.header": true,
+  "vscodeExclude.include": [],
+  "vscodeExclude.exclude": [],
+  "vscodeExclude.compileCommandsPath": ""
+}
+```
+
+优先级规则：
+
+1. `vsExclude.config.*`
+2. `vsExclude.*`
+3. `vscodeExclude.config.*`
+4. `vscodeExclude.*`
+5. 代码默认值

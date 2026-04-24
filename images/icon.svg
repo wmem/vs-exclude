@@ -1,0 +1,37 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="28" y1="24" x2="228" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#153766"/>
+      <stop offset="1" stop-color="#09172E"/>
+    </linearGradient>
+    <linearGradient id="card" x1="76" y1="64" x2="186" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#D9F7FF"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="168" y1="92" x2="216" y2="140" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#65F4FF"/>
+      <stop offset="1" stop-color="#00AEEF"/>
+    </linearGradient>
+    <filter id="shadow" x="30" y="30" width="196" height="196" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#061224" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect x="16" y="16" width="224" height="224" rx="52" fill="url(#bg)"/>
+  <circle cx="52" cy="208" r="24" fill="#0F2445" opacity="0.8"/>
+  <circle cx="210" cy="46" r="18" fill="#183C6F" opacity="0.9"/>
+  <path d="M44 70C44 56.7452 54.7452 46 68 46H118L136 64H188C201.255 64 212 74.7452 212 88V172C212 185.255 201.255 196 188 196H68C54.7452 196 44 185.255 44 172V70Z" fill="#18B7F7" opacity="0.22"/>
+
+  <g filter="url(#shadow)">
+    <path d="M86 60C78.268 60 72 66.268 72 74V176C72 183.732 78.268 190 86 190H160C167.732 190 174 183.732 174 176V103.799C174 100.086 172.526 96.5255 169.899 93.8995L140.101 64.1005C137.474 61.4745 133.914 60 130.201 60H86Z" fill="url(#card)"/>
+    <path d="M133 60V92C133 99.732 139.268 106 147 106H174" fill="#BDEEFF"/>
+    <path d="M133 60V92C133 99.732 139.268 106 147 106H174" stroke="#84DDF8" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M95 118H151" stroke="#0E7EC5" stroke-width="10" stroke-linecap="round"/>
+    <path d="M95 142H137" stroke="#44CFFF" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="178" cy="162" r="34" fill="#081527"/>
+  <circle cx="178" cy="162" r="27" fill="url(#accent)"/>
+  <circle cx="178" cy="162" r="14" fill="#081527"/>
+  <path d="M158 182L198 142" stroke="#F8FCFF" stroke-width="10" stroke-linecap="round"/>
+</svg>

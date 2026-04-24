@@ -1,0 +1,178 @@
+{
+  "name": "vs-exclude",
+  "displayName": "vs-exclude",
+  "publisher": "wmem",
+  "version": "0.0.1",
+  "description": "Generate files.exclude from compile_commands.json and custom keep rules.",
+  "author": "wmem",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wmem/vs-exclude.git"
+  },
+  "homepage": "https://github.com/wmem/vs-exclude#readme",
+  "bugs": {
+    "url": "https://github.com/wmem/vs-exclude/issues"
+  },
+  "main": "./out/src/extension.js",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "vsExclude.generate",
+        "title": "vs-exclude: Generate files.exclude"
+      },
+      {
+        "command": "vsExclude.showLog",
+        "title": "vs-exclude: Show Log"
+      }
+    ],
+    "configuration": {
+      "title": "vs-exclude",
+      "properties": {
+        "vsExclude.config": {
+          "type": "object",
+          "default": {
+            "header": true,
+            "include": [],
+            "exclude": [],
+            "compileCommandsPath": ""
+          },
+          "markdownDescription": "Primary object-style configuration stored in `.vscode/settings.json`.",
+          "properties": {
+            "header": {
+              "type": "boolean",
+              "default": true,
+              "description": "Keep .h files under include search directories parsed from compile_commands.json."
+            },
+            "include": {
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "description": "Glob patterns for files that should always be kept visible."
+            },
+            "exclude": {
+              "type": "array",
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "description": "Glob patterns that remove files from the keep set."
+            },
+            "compileCommandsPath": {
+              "type": "string",
+              "default": "",
+              "description": "Optional path to compile_commands.json. Relative paths are resolved from the workspace root."
+            }
+          }
+        },
+        "vsExclude.header": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep .h files under include search directories parsed from compile_commands.json.",
+          "deprecationMessage": "Use vsExclude.config.header instead."
+        },
+        "vsExclude.include": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for files that should always be kept visible.",
+          "deprecationMessage": "Use vsExclude.config.include instead."
+        },
+        "vsExclude.exclude": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns that remove files from the keep set.",
+          "deprecationMessage": "Use vsExclude.config.exclude instead."
+        },
+        "vsExclude.compileCommandsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to compile_commands.json. Relative paths are resolved from the workspace root.",
+          "deprecationMessage": "Use vsExclude.config.compileCommandsPath instead."
+        },
+        "vscodeExclude.config": {
+          "type": "object",
+          "default": {
+            "header": true,
+            "include": [],
+            "exclude": [],
+            "compileCommandsPath": ""
+          },
+          "markdownDescription": "Backward-compatible legacy configuration namespace. Use `vsExclude.config` instead.",
+          "deprecationMessage": "Use vsExclude.config instead."
+        },
+        "vscodeExclude.header": {
+          "type": "boolean",
+          "default": true,
+          "description": "Legacy compatibility alias.",
+          "deprecationMessage": "Use vsExclude.config.header instead."
+        },
+        "vscodeExclude.include": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Legacy compatibility alias.",
+          "deprecationMessage": "Use vsExclude.config.include instead."
+        },
+        "vscodeExclude.exclude": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Legacy compatibility alias.",
+          "deprecationMessage": "Use vsExclude.config.exclude instead."
+        },
+        "vscodeExclude.compileCommandsPath": {
+          "type": "string",
+          "default": "",
+          "description": "Legacy compatibility alias.",
+          "deprecationMessage": "Use vsExclude.config.compileCommandsPath instead."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./tsconfig.json",
+    "watch": "tsc -watch -p ./tsconfig.json",
+    "pretest": "npm run compile",
+    "test": "node --test ./out/test",
+    "package:vsix": "npm run compile && vsce package"
+  },
+  "keywords": [
+    "vscode",
+    "extension",
+    "compile_commands",
+    "files.exclude"
+  ],
+  "dependencies": {
+    "minimatch": "^10.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/vscode": "^1.93.0",
+    "@vscode/vsce": "^3.6.2",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "typescript": "^6.0.3"
+  }
+}

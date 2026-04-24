@@ -1,0 +1,15 @@
+src/**
+test/**
+.vscode/**
+node_modules/**
+out/**
+tsconfig.json
+.gitignore
+package-lock.json
+!.vscodeignore
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE
+!doc/**
+!out/src/**
