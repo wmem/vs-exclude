@@ -80,14 +80,17 @@
 
 ### 7. 写回配置
 
-最终通过 VS Code 配置 API 直接覆盖工作区级 `files.exclude`：
+最终会直接更新工作区 `.vscode/settings.json` 中的 `files.exclude` 字段：
 
 ```ts
-workspace.getConfiguration("files", workspaceFolder.uri)
-  .update("exclude", filesExclude, vscode.ConfigurationTarget.WorkspaceFolder);
+// preserve other settings, only replace `files.exclude`
+settings["files.exclude"] = filesExclude;
 ```
 
-注意：这里是完整覆盖，不会保留旧的 `files.exclude` 项。
+注意：
+
+- 这里会完整覆盖旧的 `files.exclude` 项。
+- 其他设置项会被保留，不会被插件改写。
 
 ## 日志与并发控制
 

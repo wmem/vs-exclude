@@ -1,6 +1,7 @@
 /**
  * 后台任务模块，负责串行执行生成流程并输出运行日志。
  */
+import { applyEdits, modify, parse } from "jsonc-parser";
 import * as vscode from "vscode";
 import { readExtensionConfig } from "./config";
 import { loadCompileCommands } from "./compileCommands";
@@ -147,12 +148,125 @@ async function executeGeneration(outputChannel: vscode.OutputChannel): Promise<v
 
   const writeStartedAt = Date.now();
   appendLog(outputChannel, "write", "writing files.exclude to workspace settings");
-  await vscode.workspace
-    .getConfiguration("files", workspaceFolder.uri)
-    .update("exclude", filesExclude, vscode.ConfigurationTarget.WorkspaceFolder);
+  const writeResult = await writeFilesExcludeToSettings(workspaceFolder, filesExclude);
+  appendLog(outputChannel, "write", `settings path: ${writeResult.settingsPath.fsPath}`);
+  appendLog(outputChannel, "write", `settings bytes: ${writeResult.byteLength}`);
+  appendLog(outputChannel, "write", `write mode: ${writeResult.changed ? "updated" : "skipped (no change)"}`);
 
   appendLog(outputChannel, "write", `files.exclude updated in ${Date.now() - writeStartedAt} ms`);
   void vscode.window.showInformationMessage("vs-exclude updated files.exclude.");
+}
+
+interface WriteFilesExcludeResult {
+  changed: boolean;
+  byteLength: number;
+  settingsPath: vscode.Uri;
+}
+
+/**
+ * 直接更新工作区 `.vscode/settings.json` 中的 `files.exclude`，并保留其他配置。
+ */
+async function writeFilesExcludeToSettings(
+  workspaceFolder: vscode.WorkspaceFolder,
+  filesExclude: Record<string, boolean>,
+): Promise<WriteFilesExcludeResult> {
+  const vscodeDirectory = vscode.Uri.joinPath(workspaceFolder.uri, ".vscode");
+  const settingsPath = vscode.Uri.joinPath(vscodeDirectory, "settings.json");
+
+  await vscode.workspace.fs.createDirectory(vscodeDirectory);
+
+  const existingText = await readJsoncFile(settingsPath);
+  const currentDocument = parse(existingText) as Record<string, unknown> | undefined;
+  const currentFilesExclude = isObject(currentDocument?.["files.exclude"])
+    ? currentDocument["files.exclude"]
+    : undefined;
+
+  if (stableStringify(currentFilesExclude) === stableStringify(filesExclude)) {
+    return {
+      changed: false,
+      byteLength: new TextEncoder().encode(existingText).byteLength,
+      settingsPath,
+    };
+  }
+
+  const updatedText = applyFilesExcludeToSettings(existingText, filesExclude);
+  const encodedText = new TextEncoder().encode(updatedText);
+  await vscode.workspace.fs.writeFile(settingsPath, encodedText);
+
+  return {
+    changed: true,
+    byteLength: encodedText.byteLength,
+    settingsPath,
+  };
+}
+
+/**
+ * 使用 JSONC 编辑保留 settings.json 里的其他内容，只替换 `files.exclude`。
+ */
+function applyFilesExcludeToSettings(
+  settingsText: string,
+  filesExclude: Record<string, boolean>,
+): string {
+  const edits = modify(settingsText || "{}", ["files.exclude"], filesExclude, {
+    formattingOptions: {
+      insertSpaces: true,
+      tabSize: 4,
+      eol: settingsText.includes("\r\n") ? "\r\n" : "\n",
+    },
+    isArrayInsertion: false,
+    getInsertionIndex: undefined,
+  });
+
+  return applyEdits(settingsText || "{}", edits);
+}
+
+/**
+ * 读取 JSONC 文件文本；如果文件不存在则返回空对象文本。
+ */
+async function readJsoncFile(filePath: vscode.Uri): Promise<string> {
+  try {
+    const fileBytes = await vscode.workspace.fs.readFile(filePath);
+    return new TextDecoder().decode(fileBytes);
+  } catch (error: unknown) {
+    if (error instanceof vscode.FileSystemError && error.code === "FileNotFound") {
+      return "{}\n";
+    }
+
+    throw error;
+  }
+}
+
+/**
+ * 判断未知值是否为普通对象，供设置比较逻辑使用。
+ */
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * 稳定序列化对象，避免键顺序影响“是否有变化”的判断。
+ */
+function stableStringify(value: unknown): string {
+  return JSON.stringify(sortValue(value));
+}
+
+/**
+ * 递归排序对象键，确保比较结果稳定。
+ */
+function sortValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortValue);
+  }
+
+  if (isObject(value)) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, entryValue]) => [key, sortValue(entryValue)]),
+    );
+  }
+
+  return value;
 }
 
 /**
