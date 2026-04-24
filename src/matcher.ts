@@ -1,7 +1,7 @@
 /**
  * 匹配模块，负责根据 include/exclude 与编译结果计算保留和隐藏集合。
  */
-import { minimatch } from "minimatch";
+import { matchesAnyPattern, normalizePatterns } from "./excludePatterns";
 import { isWithinRelativeDirectory, normalizeRelativePath } from "./pathUtils";
 
 const ALWAYS_VISIBLE_FILES = new Set<string>([".vscode/settings.json"]);
@@ -86,24 +86,3 @@ export function buildVisibilitySets(input: MatchInput): MatchResult {
   };
 }
 
-/**
- * 判断单个文件是否命中任一 glob 模式。
- */
-function matchesAnyPattern(filePath: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    if (pattern === filePath) {
-      return true;
-    }
-
-    return minimatch(filePath, pattern, { dot: true });
-  });
-}
-
-/**
- * 清洗用户输入的 glob 模式并统一成相对路径格式。
- */
-function normalizePatterns(patterns: string[]): string[] {
-  return patterns
-    .map((pattern) => normalizeRelativePath(pattern.trim()))
-    .filter((pattern) => pattern.length > 0);
-}

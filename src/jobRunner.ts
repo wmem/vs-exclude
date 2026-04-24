@@ -118,13 +118,20 @@ async function executeGeneration(
 
   appendLog(outputChannel, "scan", "scanning workspace files");
   progressReporter.report("正在扫描工作区文件...");
-  const allFiles = await scanWorkspaceFiles(workspaceFolder);
+  const scanResult = await scanWorkspaceFiles(workspaceFolder, config.exclude);
+  const allFiles = scanResult.files;
   appendLog(
     outputChannel,
     "scan",
     `workspace files scanned: ${allFiles.length} in ${Date.now() - scanStartedAt} ms`,
   );
+  appendLog(
+    outputChannel,
+    "scan",
+    `excluded directories skipped: ${scanResult.skippedDirectories.length}`,
+  );
   appendLog(outputChannel, "scan", `file samples: ${formatList(allFiles, 5)}`);
+  appendLog(outputChannel, "scan", `skipped directory samples: ${formatList(scanResult.skippedDirectories, 5)}`);
 
   const compileCommandsStartedAt = Date.now();
   appendLog(outputChannel, "compile_commands", "loading compile_commands.json");

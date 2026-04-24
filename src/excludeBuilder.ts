@@ -1,8 +1,7 @@
 /**
  * files.exclude 构建模块，负责把隐藏文件集合折叠为目录级规则。
  */
-import { minimatch } from "minimatch";
-import { normalizeRelativePath } from "./pathUtils";
+import { matchesAnyPattern, normalizePatterns } from "./excludePatterns";
 
 interface DirectoryNode {
   children: Map<string, DirectoryNode>;
@@ -139,26 +138,3 @@ function collectPatterns(
   }
 }
 
-/**
- * 判断单个文件是否命中任一透传到 files.exclude 的 glob 模式。
- */
-function matchesAnyPattern(filePath: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => {
-    if (pattern === filePath) {
-      return true;
-    }
-
-    return minimatch(filePath, pattern, { dot: true });
-  });
-}
-
-/**
- * 清洗透传到 files.exclude 的 glob 规则，避免重复和空值。
- */
-function normalizePatterns(patterns: string[]): string[] {
-  return [...new Set(
-    patterns
-      .map((pattern) => normalizeRelativePath(pattern.trim()))
-      .filter((pattern) => pattern.length > 0),
-  )];
-}
